@@ -1,0 +1,16 @@
+# Use official Node.js image for development
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /usr/src/app
+
+COPY package.json yarn.lock ./
+RUN yarn install
+
+COPY . .
+
+EXPOSE 3000
+
+ENV NODE_ENV=development
+
+CMD [ "yarn", "start:dev" ]
