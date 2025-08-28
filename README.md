@@ -1,98 +1,96 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# GitHub Repository Search API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This project is a **NestJS-based API** for searching GitHub repositories with advanced filtering, popularity scoring, and caching.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 How to Run the Project
 
-## Description
+1. **Clone the repository** and install dependencies:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+   ```bash
+   git clone
+   cd <project-directory>
+   yarn install
+   ```
 
-## Project setup
+2. **Set up environment variables** (see below).
 
-```bash
-$ yarn install
+3. **Start the development server**:
+   - Using Docker (recommended for development):
+     ```bash
+     docker compose up
+     ```
+   - Or locally:
+     ```bash
+     yarn start:dev
+     ```
+
+4. **API will be available at**:  
+   `http://localhost:3000/api`
+
+## 🌟 What Does This Project Do?
+
+- **Search GitHub repositories** with filters for language, license, stars, last update, etc.
+- **Popularity scoring**: Each repository result is enriched with a computed `popularity_score` based on stars, forks, recency.
+- **Caching**: Results are cached in memory and/or Redis for fast repeated queries.
+- **Rate limiting**: Prevents abuse by limiting the number of requests per client.
+- **Health checks**: Built-in endpoints for monitoring service health.
+
+## 🏆 Popularity Scoring Algorithm
+
+We turn stars, forks, and “how recently it was updated” into 0–1 scores, then take a weighted average and scale to 0–100.
+
+- **Stars/forks** are log-scaled so each doubling helps but huge repos don’t dominate.
+- **Recency** uses exponential decay with a chosen half-life (e.g., 90 days).
+- **earlyMomentumBoost** if the repo is very new (e.g., under 30 days), we multiply the recency score by (1 + boost) (e.g., +10%) and cap at 1.0.
+- **Final score** = 0.55×stars + 0.25×forks + 0.20×recency (then ×100).
+
+**Example:**  
+500 stars, 100 forks, updated 10 days ago, repo age 20 days, boost 10%  
+stars ≈ 0.675, forks ≈ 0.576, recency ≈ 0.926 → boosted to 1.000 →  
+score ≈ 0.55×0.675 + 0.25×0.576 + 0.20×1.0 = 0.715 → 71.5/100.
+
+---
+
+### Sample `popularity_score` object
+
+```json
+{
+  "stargazers_count": 195,
+  "forks_count": 51,
+  "popularity_score": {
+    "score": 60.6,
+    "cfg": {
+      "S_CAP": 10000,
+      "F_CAP": 3000,
+      "HALF_LIFE_DAYS": 90,
+      "weights": {
+        "alpha": 0.3151817879398237,
+        "beta": 0.12337302825643756,
+        "gamma": 0.1675329006450312
+      },
+      "earlyMomentumBoost": 0.1,
+      "earlyMomentumDays": 30
+    }
+  }
+}
 ```
 
-## Compile and run the project
+## ⚙️ Environment Variables
 
-```bash
-# development
-$ yarn run start
+Create a `.env` file in the project root. The following variables are supported:
 
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
 ```
 
-## Run tests
+| Variable            | Description                                          | Default       |
+| ------------------- | ---------------------------------------------------- | ------------- |
+| `PORT`              | Port to run the API server                           | `3000`        |
+| `HOST`              | Host address                                         | `localhost`   |
+| `CACHE_TTL`         | Cache time-to-live in milliseconds                   | `60000`       |
+| `CACHE_TTL_SECONDS` | Cache TTL in seconds (for controller logic)          | `300`         |
+| `REDIS_URL`         | Redis connection string (optional)                   | _(none)_      |
+| `THROTTLE_TTL`      | Rate limit window in ms                              | `60000`       |
+| `THROTTLE_LIMIT`    | Max requests per window                              | `60`          |
+| `GITHUB_TOKEN`      | GitHub API token (optional, for higher rate limits)  | _(none)_      |
+| `NODE_ENV`          | Node environment (`development`, `production`, etc.) | `development` |
 
-```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
