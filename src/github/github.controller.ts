@@ -4,6 +4,7 @@ import {
   Query,
   UseInterceptors,
   Inject,
+  Logger,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { GithubService } from './github.service';
@@ -14,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 @UseInterceptors(CacheInterceptor)
 export class GithubController {
   private readonly cacheTtlSeconds: number;
+  private readonly logger = new Logger(GithubController.name);
 
   constructor(
     private readonly github: GithubService,
@@ -32,6 +34,9 @@ export class GithubController {
     return this.cacheTtlSeconds;
   })
   search(@Query() dto: SearchReposDto) {
+    this.logger.log(
+      `Searching repositories with params: ${JSON.stringify(dto)} (Cache TTL: ${this.cacheTtlSeconds}s)`,
+    );
     return this.github.searchRepositories(dto);
   }
 }

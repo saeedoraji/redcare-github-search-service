@@ -1,7 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
-  Inject,
+  Logger,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -12,6 +12,8 @@ import { PopularityScoringService } from './scoring/popularity-scoring.service';
 
 @Injectable()
 export class GithubService {
+  private readonly logger = new Logger(GithubService.name);
+
   constructor(
     private readonly http: HttpService,
     private readonly scoring: PopularityScoringService,
@@ -37,8 +39,15 @@ export class GithubService {
 
     const url = `/search/repositories?${qs.stringify(params)}`;
 
+    this.logger.log(
+      `Searching GitHub repositories with params: ${JSON.stringify(params)}`,
+    );
+
     try {
       const res = await lastValueFrom(this.http.get<GithubSearchResponse>(url));
+      this.logger.log(
+        `GitHub API responded with ${res.data.items.length} items for query "${q}"`,
+      );
       return {
         ...res.data,
         items: res.data.items.map(this.enrichWithScore.bind(this)),
@@ -46,6 +55,7 @@ export class GithubService {
     } catch (err: any) {
       const message =
         err?.response?.data?.message || err.message || 'GitHub request failed';
+      this.logger.error(`GitHub API request failed: ${message}`, err?.stack);
       throw new InternalServerErrorException(message);
     }
   }
@@ -72,6 +82,10 @@ export class GithubService {
       archived: repo.archived ?? false,
       repoAgeDays,
     });
+
+    this.logger.debug(
+      `Calculated popularity_score=${score} for repo "${repo.full_name ?? repo.name}" (stars=${repo.stargazers_count}, forks=${repo.forks_count}, daysSinceUpdate=${daysSinceUpdate}, repoAgeDays=${repoAgeDays}, archived=${repo.archived})`,
+    );
 
     return { ...repo, popularity_score: score };
   }
