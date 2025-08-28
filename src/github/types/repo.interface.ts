@@ -1,3 +1,5 @@
+import { PopularityConfig } from '../scoring/popularity.config';
+
 export interface GithubRepo {
   id: number;
   name: string;
@@ -11,7 +13,13 @@ export interface GithubRepo {
   license: { key: string; name: string } | null;
   owner: { login: string; avatar_url: string; html_url: string };
   updated_at: string;
-  score: number;
+  pushed_at: string;
+  created_at: string;
+  archived: boolean;
+  popularity_score: {
+    score: number;
+    score_details: PopularityConfig;
+  };
 }
 
 export interface GithubSearchResponse {
