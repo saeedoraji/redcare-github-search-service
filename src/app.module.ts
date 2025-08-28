@@ -6,6 +6,8 @@ import { Keyv } from 'keyv';
 import { CacheModule, CacheModuleOptions } from '@nestjs/cache-manager';
 import { CacheableMemory } from 'cacheable';
 import { HealthModule } from './health/health.module';
+import { GithubModule } from './github/github.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { HealthModule } from './health/health.module';
       }),
     }),
     CacheModule.registerAsync({
+      isGlobal: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (
@@ -44,6 +47,7 @@ import { HealthModule } from './health/health.module';
       },
     }),
     HealthModule,
+    GithubModule,
   ],
 })
 export class AppModule {}
