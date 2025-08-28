@@ -5,6 +5,7 @@ import { createKeyv } from '@keyv/redis';
 import { Keyv } from 'keyv';
 import { CacheModule, CacheModuleOptions } from '@nestjs/cache-manager';
 import { CacheableMemory } from 'cacheable';
+import { HealthModule } from './health/health.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,6 +43,7 @@ import { CacheableMemory } from 'cacheable';
         };
       },
     }),
+    HealthModule,
   ],
 })
 export class AppModule {}
